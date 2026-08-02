@@ -1,0 +1,31 @@
+/**
+ * 从当前 <script> 标签的 data-* 属性解析初始化参数，见 docs/API.md 的 "Widget 初始化参数"。
+ */
+export interface WidgetConfig {
+  productSlug: string;
+  userEmail?: string;
+  apiBase: string;
+}
+
+const DEFAULT_API_BASE = "https://api.feedbackport.example.com";
+
+export class WidgetConfigError extends Error {}
+
+export function readConfig(script: HTMLOrSVGScriptElement | null): WidgetConfig {
+  if (!script || !("dataset" in script)) {
+    throw new WidgetConfigError(
+      "无法定位加载 widget.js 的 <script> 标签，请确认脚本未被异步搬运或克隆",
+    );
+  }
+
+  const productSlug = (script as HTMLScriptElement).dataset.product;
+  if (!productSlug) {
+    throw new WidgetConfigError("缺少必填的 data-product 属性，见 docs/INTEGRATION.md");
+  }
+
+  return {
+    productSlug,
+    userEmail: (script as HTMLScriptElement).dataset.userEmail || undefined,
+    apiBase: (script as HTMLScriptElement).dataset.apiBase || DEFAULT_API_BASE,
+  };
+}
