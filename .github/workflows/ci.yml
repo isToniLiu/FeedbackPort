@@ -11,9 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 版本号不在这里写，读根 package.json 的 packageManager 字段，
+      # 避免两处版本声明冲突（pnpm/action-setup 会直接报错拒绝启动）
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
