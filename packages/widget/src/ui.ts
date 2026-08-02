@@ -1,4 +1,4 @@
-import type { WidgetConfig } from "./config.js";
+import type { WidgetConfig } from "./config";
 
 export interface FormSubmitPayload {
   title: string;

@@ -48,7 +48,7 @@ pnpm dev   # start apps/web
 
 ## Current status
 
-The four public feedback API endpoints (submit / vote / list / detail) are wired to real Supabase reads/writes with the full three-layer anti-abuse pipeline (honeypot + Turnstile + Redis rate limiting). The admin console is also up: magic-link login, a cross-product unified inbox with status changes and replies, and a new-product form. Not built yet: the public board page UI, and email notifications (`notify-submitter` is still a stub). See the Phase 0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md) for current progress.
+The four public feedback API endpoints (submit / vote / list / detail) are wired to real Supabase reads/writes with the full three-layer anti-abuse pipeline (honeypot + Turnstile + Redis rate limiting). The admin console is up (magic-link login, cross-product unified inbox, status changes, replies, new-product form), and so is the public board (`/board` list/submit/vote, `/board/[id]` detail/replies). Not built yet: real Turnstile token acquisition (both the widget and the board still use a placeholder) and email notifications (`notify-submitter` is still a stub). See the Phase 0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md) for current progress.
 
 ## License
 
@@ -106,7 +106,7 @@ pnpm dev   # 启动 apps/web
 
 ## 当前状态
 
-提交反馈 / 投票 / 列表 / 详情四个公开 API 端点已经接通真实的 Supabase 读写和防刷三层（蜜罐 + Turnstile + Redis 限流）。管理后台也搭好了：magic link 登录、跨产品统一收件箱（改状态、写回复）、新增产品表单。还没做的：公开面板的页面 UI、邮件通知（`notify-submitter` 还是 stub）。当前进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
+提交反馈 / 投票 / 列表 / 详情四个公开 API 端点已经接通真实的 Supabase 读写和防刷三层（蜜罐 + Turnstile + Redis 限流）。管理后台（magic link 登录、跨产品统一收件箱、改状态、写回复、新增产品表单）和公开面板（`/board` 列表/提交/投票，`/board/[id]` 详情/回复）都搭好了。还没做的：真正接入 Turnstile（widget 和 board 现在都还是占位 token）、邮件通知（`notify-submitter` 还是 stub）。当前进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
 
 ## License
 

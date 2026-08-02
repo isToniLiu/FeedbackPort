@@ -6,7 +6,7 @@
 - [x] Admin console "new product" form (slug/name/brand_color) — `apps/web/src/app/admin/products/new`
 - [x] Framework-agnostic embed widget (vanilla TS, Shadow DOM, honeypot field)
 - [x] Public endpoints: submit feedback / vote / list / detail (`apps/web/src/app/api/feedback/**`) — the API layer is wired to real Supabase reads/writes
-- [ ] Public board UI: pages that resolve the tenant from the subdomain and render the list/vote/detail/reply views (the API is ready, the pages aren't written yet)
+- [x] Public board UI: list/submit/vote at `/board`, detail + replies at `/board/[id]` (`apps/web/src/app/board/**`) — Turnstile token acquisition is still the same placeholder TODO as the widget, real integration pending
 - [x] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), plus Supabase Auth magic-link login (`apps/web/src/app/admin/**`, `apps/web/src/app/login`)
 - [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
 - [ ] Event-driven email notifications (DB webhook → Edge Function → Resend) — `notify-submitter` is currently just a one-line-log stub
@@ -56,7 +56,7 @@
 - [x] 管理后台"新增产品"表单（slug/name/brand_color）——`apps/web/src/app/admin/products/new`
 - [x] 无框架嵌入组件（vanilla TS，Shadow DOM，蜜罐字段）
 - [x] 公开端点：提交反馈 / 投票 / 列表 / 详情（`apps/web/src/app/api/feedback/**`），API 层已接 Supabase 真实读写
-- [ ] 公开面板 UI：按子域名解析租户后渲染列表/投票/详情/回复的页面（API 已就绪，页面还没写）
+- [x] 公开面板 UI：`/board` 列表+提交+投票，`/board/[id]` 详情+回复（`apps/web/src/app/board/**`）——Turnstile token 获取还是和 widget 一样的占位 TODO，真正接入还没做
 - [x] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含 Supabase Auth magic link 登录（`apps/web/src/app/admin/**`、`apps/web/src/app/login`）
 - [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
 - [ ] 事件驱动邮件通知（DB Webhook → Edge Function → Resend），`notify-submitter` 目前只是 log 一行的 stub

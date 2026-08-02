@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slugSchema, submitFeedbackSchema, voteFromWidgetSchema } from "./schemas.js";
+import { slugSchema, submitFeedbackSchema, voteFromWidgetSchema } from "./schemas";
 
 describe("slugSchema", () => {
   it("接受小写字母数字连字符", () => {

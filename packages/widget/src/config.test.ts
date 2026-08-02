@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readConfig, WidgetConfigError } from "./config.js";
+import { readConfig, WidgetConfigError } from "./config";
 
 function makeScript(dataset: Record<string, string>): HTMLScriptElement {
   const script = document.createElement("script");

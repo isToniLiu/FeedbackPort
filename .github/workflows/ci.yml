@@ -27,3 +27,8 @@ jobs:
       - run: pnpm -r lint
 
       - run: pnpm -r test
+
+      # webpack 的模块解析比 tsc/vitest（走 esbuild/rollup）严格，之前发现过
+      # packages/core 里 .js 后缀的相对导入能过 typecheck/test 但过不了这个，
+      # 留着这一步防止同类问题再溜回来
+      - run: pnpm --filter @feedbackport/web build

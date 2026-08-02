@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FEEDBACK_STATUSES } from "./types.js";
+import { FEEDBACK_STATUSES } from "./types";
 
 /** 小写字母、数字、连字符，对应 products.slug 的约束 */
 export const slugSchema = z
