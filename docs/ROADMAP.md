@@ -3,11 +3,11 @@
 ## Phase 0: MVP (working for personal use)
 
 - [x] `products` / `feedback` / `votes` / `replies` tables + RLS policies (see DATA_MODEL.md)
-- [ ] Admin console "new product" form (slug/name/brand_color) — without this step the integration guide has nothing to point to
+- [x] Admin console "new product" form (slug/name/brand_color) — `apps/web/src/app/admin/products/new`
 - [x] Framework-agnostic embed widget (vanilla TS, Shadow DOM, honeypot field)
 - [x] Public endpoints: submit feedback / vote / list / detail (`apps/web/src/app/api/feedback/**`) — the API layer is wired to real Supabase reads/writes
 - [ ] Public board UI: pages that resolve the tenant from the subdomain and render the list/vote/detail/reply views (the API is ready, the pages aren't written yet)
-- [ ] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), including login
+- [x] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), plus Supabase Auth magic-link login (`apps/web/src/app/admin/**`, `apps/web/src/app/login`)
 - [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
 - [ ] Event-driven email notifications (DB webhook → Edge Function → Resend) — `notify-submitter` is currently just a one-line-log stub
 - [ ] At least 2 of this developer's own products integrated as validation (needs real Supabase/Turnstile/Upstash/Resend projects + a deployment)
@@ -53,11 +53,11 @@
 ## Phase 0：MVP（自用可跑通）
 
 - [x] `products` / `feedback` / `votes` / `replies` 表 + RLS 策略（见 DATA_MODEL.md）
-- [ ] 管理后台"新增产品"表单（slug/name/brand_color），没有这一步接入指南无从谈起
+- [x] 管理后台"新增产品"表单（slug/name/brand_color）——`apps/web/src/app/admin/products/new`
 - [x] 无框架嵌入组件（vanilla TS，Shadow DOM，蜜罐字段）
 - [x] 公开端点：提交反馈 / 投票 / 列表 / 详情（`apps/web/src/app/api/feedback/**`），API 层已接 Supabase 真实读写
 - [ ] 公开面板 UI：按子域名解析租户后渲染列表/投票/详情/回复的页面（API 已就绪，页面还没写）
-- [ ] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含登录态
+- [x] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含 Supabase Auth magic link 登录（`apps/web/src/app/admin/**`、`apps/web/src/app/login`）
 - [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
 - [ ] 事件驱动邮件通知（DB Webhook → Edge Function → Resend），`notify-submitter` 目前只是 log 一行的 stub
 - [ ] 至少 2 个自己的产品接入验证（需要真实 Supabase/Turnstile/Upstash/Resend 项目 + 部署）
