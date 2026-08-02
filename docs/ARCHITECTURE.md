@@ -1,4 +1,100 @@
-# 架构设计
+# Architecture
+
+## System context
+
+```mermaid
+flowchart LR
+    subgraph HostProduct["Each product's web/app (host)"]
+        W[Embed widget: widget.js]
+    end
+
+    U1[Anonymous / logged-in user] -->|browser| Board[Public board\nboard.product-slug.domain]
+    U1 -->|browser| W
+    Dev[You, the developer] -->|logs in| Admin[Admin console]
+
+    W -->|POST /api/feedback\nPOST /api/feedback/:id/vote| API[Next.js API Routes]
+    Board -->|GET /api/feedback| API
+    Admin -->|PATCH /api/admin/*| API
+
+    API --> DB[(Supabase Postgres)]
+    API -->|verify| Turnstile[Cloudflare Turnstile]
+    API -->|rate limit| Redis[(Upstash Redis)]
+
+    DB -->|DB webhook: insert replies / update status| Notify[Edge Function: notify-submitter]
+    Notify --> Resend[Resend email]
+    Resend --> U1
+```
+
+## Module boundaries (high cohesion, low coupling)
+
+| Module | Responsibility | Explicitly not | Depends on |
+|---|---|---|---|
+| **widget** (embed component) | Renders the submission form, calls the public API | Never connects to the database directly, has no knowledge the admin console exists | Only `packages/core`'s types/validation schemas |
+| **board** (public page) | Shows the feedback list, votes, status, and replies for a tenant | Contains no admin operations (status changes, writing replies) | Depends on `core`, reads/writes through API Routes |
+| **admin** (admin console) | Status changes, writing replies, the cross-product unified inbox view | Never sends email directly (see the event-driven design below) | Depends on `core`, requires login |
+| **API Routes** | Request validation (including anti-abuse), tenant resolution, database reads/writes | Not responsible for sending email or computing duplicates (dedup is a separate, later-phase module) | Depends on `core`, depends on the Supabase client |
+| **notify-submitter** (Edge Function) | Listens for DB events, assembles and sends notification emails | Never called directly by business code — only reacts to a DB webhook | Depends on `core`, depends on Resend |
+| **tenant-resolver** (middleware) | Resolves a request's subdomain/slug into a `product_id` | Does no authorization (that's RLS's and the API layer's job) | Shared by board/widget/admin |
+
+**The key decoupling point**: when an admin writes a reply in the console, that's just an insert into the `replies` table. The side effect of "email the user" is triggered by a database change event firing an Edge Function — the business code itself has no idea "sending an email" is even a thing. Benefits:
+
+- Adding "also post to Slack when someone replies" later just means adding another Edge Function that listens to the same event — no change to the reply-writing code
+- A bug in the notification logic can't break the core read/write path (they're independent units of execution; one going down doesn't take the other with it)
+
+## Multi-tenant routing design
+
+Borrows Fider's approach: one codebase, subdomain mapped to `product_id`.
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant Middleware as Next.js Middleware
+    participant DB as products table
+
+    Browser->>Middleware: Request cardwhisper.feedback.domain.com
+    Middleware->>Middleware: Extract subdomain "cardwhisper"
+    Middleware->>DB: Look up product_id by slug (cached)
+    DB-->>Middleware: product_id + branding config
+    Middleware->>Browser: Inject tenant context, continue rendering board/widget
+```
+
+Local dev and test environments fall back to the `DEFAULT_TENANT_SLUG` env var instead of relying on a real subdomain.
+
+## Cross-product unified inbox
+
+The admin console's default view is "all products" — it aggregates feedback across every `product_id`, with an option to switch to a single-product view. This is the core scenario difference versus Fider/Astuto/Quackback: they assume "one deployment = one product/organization," while this project assumes "one deployment = every product this developer owns." As a result:
+
+- `feedback` queries default to no `product_id` filter — the admin console is the only "god view" entry point
+- board/widget must always filter by `product_id` (tenant isolation is mandatory in these two end-user-facing modules, optional in the admin console)
+
+## Key data flows
+
+### Submitting feedback
+
+1. The widget collects the form contents (including the honeypot field) + a Turnstile token
+2. The API Route validates the zod schema in `core` first (fields have to be parsed out before there's a honeypot value to check) → if the honeypot is non-empty, silently return a fake success → verify Turnstile → check the Redis rate limit (by IP hash) → resolve the tenant by `productSlug` → insert into `feedback`
+3. Returns a result to the widget; no notification fires (there's no one to notify about a brand-new submission)
+
+### Voting
+
+1. The widget/board submits the `productSlug` for the tenant that owns `feedback_id`, plus `voter_email` and a Turnstile token (the bar for voting is lower than submitting feedback, but still needs basic checks against script-driven ballot stuffing)
+2. The API Route validates, then double-checks that `feedback_id` actually belongs to the tenant resolved from `productSlug` (preventing cross-tenant vote-by-guessed-id), then inserts into `votes` — the `(feedback_id, voter_email)` unique constraint provides natural deduplication, and a conflict returns "already voted" instead of erroring out
+
+### Admin reply / status change
+
+1. Admin calls `PATCH /api/admin/feedback/:id` (status change) or `POST /api/admin/feedback/:id/reply` (write a reply)
+2. The write commits; no email logic is invoked at this step
+3. A Supabase DB webhook detects the insert into `replies` or the change to `feedback.status`, and asynchronously invokes the `notify-submitter` Edge Function
+4. The Edge Function looks up the submitter's email for that feedback item and calls Resend to send the notification
+
+## Security boundaries
+
+- **RLS (Row Level Security)**: `feedback`/`votes`/`replies` expose only `select` and a restricted `insert` to the anonymous role (it cannot change `status` or insert a reply with `is_admin=true`). Status changes and admin replies can only go through the service-role key (held only by server-side API Routes). The permission boundary lives at the data layer, not just behind a hidden button in the UI.
+- **Three-layer anti-abuse**: honeypot field (catches naive scripts) → Turnstile (catches automated tools) → IP rate limiting (catches high-frequency requests that get past the first two). The three layers are independent middleware functions — any one of them can be disabled or swapped out without affecting the other two.
+
+---
+
+# 架构设计（中文）
 
 ## 系统上下文
 

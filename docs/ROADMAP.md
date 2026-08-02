@@ -1,4 +1,54 @@
-# 迭代路线图
+# Roadmap
+
+## Phase 0: MVP (working for personal use)
+
+- [x] `products` / `feedback` / `votes` / `replies` tables + RLS policies (see DATA_MODEL.md)
+- [ ] Admin console "new product" form (slug/name/brand_color) — without this step the integration guide has nothing to point to
+- [x] Framework-agnostic embed widget (vanilla TS, Shadow DOM, honeypot field)
+- [x] Public endpoints: submit feedback / vote / list / detail (`apps/web/src/app/api/feedback/**`) — the API layer is wired to real Supabase reads/writes
+- [ ] Public board UI: pages that resolve the tenant from the subdomain and render the list/vote/detail/reply views (the API is ready, the pages aren't written yet)
+- [ ] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), including login
+- [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
+- [ ] Event-driven email notifications (DB webhook → Edge Function → Resend) — `notify-submitter` is currently just a one-line-log stub
+- [ ] At least 2 of this developer's own products integrated as validation (needs real Supabase/Turnstile/Upstash/Resend projects + a deployment)
+
+**Acceptance criteria**: this developer's own products can actually receive feedback, votes don't duplicate, users get emailed on status changes, and the unified inbox shows every product's new feedback at a glance.
+
+## Phase 1: open-source release prep
+
+- [ ] README (with an architecture diagram, demo screenshots/GIF)
+- [ ] Deployment guide: one-click Vercel + Supabase deploy / `docker-compose` as a fallback
+- [x] GitHub Actions CI (lint + typecheck + test)
+- [ ] Example tenant seed data (sanitized, no real product info)
+- [x] MIT LICENSE file
+- [ ] A public demo deployment (read-only, or with data reset on a schedule)
+
+**Acceptance criteria**: a stranger clones the repo and, following the README, has a local instance running within 15 minutes.
+
+## Phase 2: feature hardening
+
+- [ ] Attachment/screenshot uploads (Supabase Storage), mainly for bug-report scenarios
+- [ ] A changelog page: auto-summarizes feedback whose `status` moved to `done`
+
+## Phase 3: AI-assisted triage (the differentiator)
+
+- [ ] Enable the `embedding` column, wire up an embedding API (e.g. `text-embedding-3-small`); do a similarity pass at submission time and flag possible duplicates for a human to confirm and merge (`duplicate_of`)
+- [ ] Auto-tagging: bug / feature request / question, to help filter the admin console
+- [ ] A weekly digest email: per-product summary of new feedback this week, top-voted items, and the pending count, sent to the developer
+
+## Phase 4: optional deep integrations (low priority)
+
+- [ ] For products that want a stronger identity story, an optional real SSO/OIDC integration (replacing the default email pre-fill approach)
+- [ ] Webhooks/an open API for Slack, Linear, and similar third-party tools (something Fider/Astuto/Quackback already have — not this project's differentiator, so whether to invest here depends on community demand)
+
+## Explicitly out of scope
+
+- No paid/seat-based billing system — that's the shape of commercial SaaS, and conflicts with this project's positioning as "an indie developer's own tool that's also open source"
+- Not chasing feature parity with Canny/Fider's full enterprise surface (complex permission tiers, SLAs) — staying "lightweight, good enough, easy to self-host" is the point
+
+---
+
+# 迭代路线图（中文）
 
 ## Phase 0：MVP（自用可跑通）
 
@@ -18,9 +68,9 @@
 
 - [ ] README（含架构图、Demo 截图/GIF）
 - [ ] 部署指引：Vercel + Supabase 一键部署 / `docker-compose` 备选
-- [ ] GitHub Actions CI（lint + typecheck + test）
+- [x] GitHub Actions CI（lint + typecheck + test）
 - [ ] 示例租户 seed 数据（脱敏，不含真实产品信息）
-- [ ] MIT LICENSE 文件
+- [x] MIT LICENSE 文件
 - [ ] 公开 Demo 部署（只读或定期重置数据）
 
 **验收标准**：陌生人 clone 仓库后，跟着 README 能在 15 分钟内跑起一个本地实例。

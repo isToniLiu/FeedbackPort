@@ -1,4 +1,61 @@
-# ADR 0002：技术选型
+# ADR 0002: Tech Stack
+
+- Status: Accepted
+- Date: 2026-08-02
+- Depends on: [0001-self-build-vs-saas-vs-oss](0001-self-build-vs-saas-vs-oss.md)
+
+## Decision
+
+| Area | Choice | Rationale |
+|---|---|---|
+| Language | TypeScript end-to-end | Shared types across packages (domain types, zod schemas) — one of the key mechanisms for "high cohesion, low coupling" |
+| Web framework | Next.js (App Router) | Public board + admin console + API Routes in one codebase; middleware handles subdomain → tenant resolution; deploys on Vercel's free tier |
+| Database | Supabase (PostgreSQL) | Free tier covers early-stage volume; native Row Level Security lets us enforce "public read, admin-only status changes" at the data layer instead of relying solely on application code; can later enable the `pgvector` extension for AI dedup and Storage for attachments |
+| Events / async | Supabase Edge Functions (Deno) | A DB webhook watches `feedback`/`replies` for changes and triggers notification emails, instead of calling send-mail logic directly from business code — this is the key design point that decouples "business action" from "side effect," see ARCHITECTURE.md |
+| Email | Resend | Free tier is enough for early volume, simple API, good support in the Next.js/Edge Function ecosystem |
+| Anti-abuse | Cloudflare Turnstile + honeypot field + IP rate limiting (Upstash Redis free tier) | Turnstile is free and doesn't force users to solve a puzzle; rate limiting uses Redis instead of a Postgres table, avoiding the need for an extra cleanup job |
+| Embed widget | Vanilla TypeScript (no framework), bundled by Vite library mode into a single IIFE file, mounted into a Shadow DOM | Meets the "framework-agnostic embed" requirement: one `<script>` tag works on a static site, React, WordPress, or any other host; Shadow DOM isolates styles from the host page's CSS |
+| Package manager / monorepo | pnpm workspaces | Native workspace protocol for managing inter-package dependencies — lighter on disk and faster to install than npm/yarn |
+| Testing | Vitest (unit) + Playwright (critical-path e2e) | Core validation rules (vote dedup, rate limiting, tenant resolution) covered by unit tests; submitting feedback, voting, and admin replies covered by an e2e pass |
+| CI | GitHub Actions | Runs lint + typecheck + test on every PR, as basic credibility backing for an open-source project |
+| License | MIT | See 0001 — serves the goal of "attracting users/contributors, building an open-source portfolio" |
+
+## Monorepo package layout
+
+```
+├── apps/
+│   └── web/                  # Next.js: public board + admin console + API Routes
+├── packages/
+│   ├── core/                 # domain types, zod schemas, business-rule constants (rate-limit thresholds, etc.)
+│   │                          # no Node-only APIs — referenced by both Next.js and the Edge Function
+│   └── widget/                # framework-agnostic embed widget, builds independently, doesn't depend on apps/web
+├── supabase/
+│   ├── migrations/           # database migration scripts
+│   └── functions/            # Edge Functions (notification service, anti-abuse checks)
+└── docs/
+    ├── decisions/            # ADRs
+    ├── ARCHITECTURE.md
+    ├── DATA_MODEL.md
+    ├── API.md
+    └── ROADMAP.md
+```
+
+**Boundary principle**: `packages/widget` only talks to the backend through the public API — it never depends directly on `apps/web` or a database client. `packages/core` is the only package both `apps/web` and `supabase/functions` are allowed to depend on, making it the single source of truth for keeping types and validation rules consistent between them (avoiding two hand-written, slowly-diverging copies of the same validation logic).
+
+## Separating the public repo from private deployments
+
+- The public repo contains only the engine code (the monorepo structure above) plus example tenant configuration (seed data using fake values)
+- This developer's own real `product_id`s, brand configuration, and real user emails live in a separate, private `.env` / private Supabase project, and never enter any commit in the public repo
+- The public repo ships a `docker-compose.yml` (or a "one-click deploy to Vercel + Supabase" guide) so other developers can self-host their own instance
+
+## Consequences
+
+- Compared to a monolith, the multi-package monorepo has slightly higher upfront setup cost (workspace config, shared tsconfig), in exchange for the long-term benefit of the widget shipping independently and `core`'s validation logic never drifting
+- Being fully serverless, local development needs the Supabase CLI to spin up a local environment simulating Postgres + Edge Functions — this needs to be documented clearly in the README
+
+---
+
+# ADR 0002：技术选型（中文）
 
 - 状态：已采纳
 - 日期：2026-08-02

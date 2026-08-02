@@ -1,4 +1,127 @@
-# 接入指南
+# Integration Guide
+
+The playbook for "wiring FeedbackPort into a specific product." Written for you — or for you to hand straight to an AI coding assistant and have it follow along.
+
+## Prerequisite: register the product first
+
+Every product you integrate needs a row in the `products` table before it has a `slug` to use. Two ways to do that:
+
+1. **Admin console** (once Phase 0 is done): log into the console → New Product → fill in slug (e.g. `cardwhisper`, lowercase letters/digits/hyphens only), name, brand_color
+2. **Manual workaround** (before the admin console exists): insert a row directly via the Supabase Studio Table Editor, or run:
+
+```sql
+insert into products (slug, name, brand_color)
+values ('cardwhisper', 'CardWhisper', '#6366f1');
+```
+
+You need the slug in hand before doing the integration steps below.
+
+## 30-second integration (plain HTML / any static site)
+
+Add one line before `</body>`:
+
+```html
+<script
+  src="https://cdn.your-domain.com/widget.js"
+  data-product="cardwhisper"
+  async
+></script>
+```
+
+No extra init code needed — the script mounts a floating feedback entry point on its own.
+
+## React / Next.js
+
+```tsx
+// components/FeedbackWidget.tsx
+'use client';
+import { useEffect } from 'react';
+
+export function FeedbackWidget({ productSlug, userEmail }: { productSlug: string; userEmail?: string }) {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.your-domain.com/widget.js';
+    script.async = true;
+    script.dataset.product = productSlug;
+    if (userEmail) script.dataset.userEmail = userEmail;
+    document.body.appendChild(script);
+    return () => { document.body.removeChild(script); };
+  }, [productSlug, userEmail]);
+
+  return null;
+}
+```
+
+Usage: `<FeedbackWidget productSlug="cardwhisper" userEmail={session?.user?.email} />`, dropped into the root layout to take effect site-wide.
+
+## Vue
+
+```vue
+<script setup lang="ts">
+import { onMounted } from 'vue';
+
+const props = defineProps<{ productSlug: string; userEmail?: string }>();
+
+onMounted(() => {
+  const script = document.createElement('script');
+  script.src = 'https://cdn.your-domain.com/widget.js';
+  script.async = true;
+  script.dataset.product = props.productSlug;
+  if (props.userEmail) script.dataset.userEmail = props.userEmail;
+  document.body.appendChild(script);
+});
+</script>
+<template></template>
+```
+
+## WordPress / other sites where editing code isn't convenient
+
+Theme editor → footer (footer.php, or a "custom HTML/JS" plugin) — paste in the same `<script>` from the 30-second integration above. No difference; the widget itself doesn't care what the host's tech stack is.
+
+## Pre-filling the logged-in user's email
+
+If the product already has its own login, pass the current user's email into `data-user-email` (see the React/Vue examples above) so users don't have to type it in when submitting feedback or voting. Leave it out and logged-out users just type it in manually — the two modes coexist without conflict. **This is not identity verification** — it just saves one input; the backend never checks whether that email actually belongs to the currently logged-in user.
+
+## Public board URL
+
+Once a product's slug is registered, it automatically gets a public voting board:
+
+```
+https://<slug>.board.your-domain.com
+```
+
+Feel free to drop this link straight into the product's "feedback" entry point, changelog footer, etc. — no extra deployment needed.
+
+## About CORS
+
+Widget requests to the API are cross-origin (host domain ≠ FeedbackPort domain). The backend already has CORS enabled for the submit-feedback and vote endpoints, so the host domain needs no extra configuration. If you're using Cloudflare Turnstile, remember to add the host product's domain to the allowed list in the Turnstile dashboard — otherwise verification will fail (this is the most common integration gotcha).
+
+## Troubleshooting checklist
+
+- Widget doesn't show up: check the browser console for a CSP (Content-Security-Policy) block on the `cdn.your-domain.com` script source — if the host site has a strict CSP, add this domain to `script-src`
+- Submissions keep failing: first check the slug is spelled correctly (case-sensitive, must exactly match `products.slug`), then check the Turnstile domain allowlist
+- Voting seems to do nothing: that's expected — the same email can only vote once per feedback item, and the API returns `alreadyVoted: true` instead of an error
+
+## AI-assisted integration: a ready-to-copy prompt template
+
+For routine new-product integrations, hand the following to an AI coding assistant (swap in the values for the placeholders in curly braces) and have it wire the widget into that project:
+
+```
+Help me integrate the FeedbackPort feedback widget into this project.
+
+- The FeedbackPort product slug is: {cardwhisper}
+- This project's tech stack is: {Next.js App Router / plain static HTML / Vue / ...}
+- Reference the integration guide at: https://github.com/{your-repo}/blob/main/docs/INTEGRATION.md
+- If this project has a logged-in state, pass the current user's email to the widget's data-user-email
+- Put the widget in the global layout so every page has a feedback entry point
+- Once done, add a "Feedback" link to this project's README pointing to https://{cardwhisper}.board.your-domain.com
+```
+
+This prompt assumes the AI assistant can read `docs/INTEGRATION.md` (paste it into context, or give it the repo link) — you shouldn't have to re-explain the integration logic every time.
+
+---
+
+# 接入指南（中文）
 
 给"要把 FeedbackPort 接进某个具体产品"的场景用的操作手册。目标读者是你自己（或者你直接把这份文档丢给 AI 编程助手，让它照着做）。
 

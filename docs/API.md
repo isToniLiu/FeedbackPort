@@ -1,4 +1,100 @@
-# API 设计
+# API Design
+
+## Two kinds of callers, two ways to identify the tenant
+
+Public endpoints have two kinds of callers, and they resolve the tenant (`product_id`) differently — you can't use the same logic for both:
+
+- **board (public page)**: runs on FeedbackPort's own subdomain (`<slug>.board.domain.com`), a same-origin request; middleware resolves the tenant from the subdomain and injects `x-tenant`, which the client cannot forge or override
+- **widget (embed component)**: runs on **the host product's own domain** (e.g. `cardwhisper.com`), a cross-origin request — the browser sends the host page's origin, and the server has no FeedbackPort subdomain to work with. So widget requests must explicitly include `productSlug` in the body, and the server resolves the tenant from that. The corresponding endpoints need CORS enabled (`Access-Control-Allow-Origin: *`, since submitting feedback/voting are public, low-risk operations that carry no credentials worth protecting)
+
+Admin endpoints aren't affected by this — they go through a login (Supabase Auth, this developer's account only) and don't need tenant resolution (they default to cross-product).
+
+All public endpoints uniformly also require a Turnstile token.
+
+## Public endpoints
+
+### `POST /api/feedback` — submit feedback (called by the widget, cross-origin)
+
+Request body:
+
+```ts
+{
+  productSlug: string;    // required, identifies the tenant since host can't be relied on
+  title: string;          // required, <= 120 chars
+  body?: string;          // optional, <= 2000 chars
+  submitterEmail: string; // required, must be a valid email
+  turnstileToken: string; // required
+  honeypot?: string;      // honeypot field — non-empty means silently drop the request
+}
+```
+
+Processing order: zod schema validation (`packages/core` — fields have to be parsed out before there's a honeypot value to check) → honeypot check → Turnstile verification → IP rate limiting (Redis) → resolve the tenant by `productSlug` → insert into `feedback`.
+
+Response: `201 { id, status: 'open' }`
+
+### `GET /api/feedback?status=&sort=` — feedback list (called by the board, same-origin, tenant resolved from `x-tenant`)
+
+- `status`: optional filter
+- `sort`: `votes` | `newest`, defaults to `votes`
+- Returns a paginated list; each item includes a vote count (aggregate query) and the latest reply's summary
+
+### `POST /api/feedback/:id/vote` — vote
+
+Request body: `{ productSlug: string; voterEmail: string; turnstileToken: string }`
+
+- Doesn't distinguish between board/widget callers — both are uniformly required to send `productSlug`, which is used to double-check before the write that this `feedback_id` really does belong to that tenant, preventing cross-tenant votes via a guessed id. That's more conservative than "trust `x-tenant` because it's a same-origin request," at the cost of the board also having to include this one extra field — worth it for the simplicity of a single schema/single code path
+- A unique-constraint conflict (already voted) returns `200 { alreadyVoted: true }` rather than being treated as an error
+- The rate-limit bar is looser than for submitting feedback, but it still goes through Turnstile
+
+### `GET /api/feedback/:id` — feedback detail
+
+Returns the feedback content plus its associated `replies` list (with an official-reply flag)
+
+## Admin endpoints (require login)
+
+### `PATCH /api/admin/feedback/:id`
+
+Request body: `{ status?: string; duplicateOf?: string }`
+
+- Changes `status`, or assigns a dedup target via `duplicateOf`
+- After a successful write, no notification logic is called directly (it's triggered asynchronously by a DB webhook, see ARCHITECTURE.md)
+
+### `POST /api/admin/feedback/:id/reply`
+
+Request body: `{ body: string }`
+
+- Inserts into `replies` with `is_admin = true`
+- Also doesn't call notification logic directly
+
+### `GET /api/admin/feedback?product=&status=`
+
+- The cross-product unified-inbox query — leaving `product` empty returns the aggregate across all products. This is the key difference from the public endpoints (which enforce single-tenant filtering, while the admin endpoint defaults to no filtering)
+
+## Widget init parameters
+
+How a host page embeds it:
+
+```html
+<script src="https://cdn.domain.com/widget.js" data-product="cardwhisper" data-user-email="user@example.com" async></script>
+```
+
+- `data-product`: required, corresponds to `products.slug`
+- `data-user-email`: optional — the host product's logged-in user's email, pre-fills the submission form so the user doesn't have to type it again (this is a lightweight substitute for a real SSO integration; the host page decides whether to pass it, and the widget performs no identity verification on it)
+
+## Event-driven notification contract
+
+Not a REST endpoint — a Supabase DB webhook configuration:
+
+| Trigger | Target Edge Function | Behavior |
+|---|---|---|
+| Insert into `replies` with `is_admin = true` | `notify-submitter` | Looks up that item's `feedback.submitter_email` and sends a "your feedback got a new reply" email |
+| Update to `feedback` where `status` changes | `notify-submitter` | Sends a "feedback status changed to XXX" email to the submitter and every voter (deduplicated email set) |
+
+The Edge Function's input is the standard Supabase webhook payload (`{ type, table, record, old_record }`) — no extra request schema needs to be designed.
+
+---
+
+# API 设计（中文）
 
 ## 两种调用方与租户识别方式
 

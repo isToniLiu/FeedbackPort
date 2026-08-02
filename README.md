@@ -1,5 +1,63 @@
 # FeedbackPort
 
+A user feedback management system for **indie developers**: one person, many products, one unified inbox.
+
+Unlike Canny / Fider / Astuto / Quackback — which are built around "one organization serving many customers" — FeedbackPort assumes a different scenario: "one developer with several unrelated products who needs a single place to see and manage everything." Key features:
+
+- **Unified inbox across products**: the admin console aggregates feedback from every product by default, no logging in/switching per product
+- **Zero standing servers**: fully serverless (Supabase + Vercel + Resend + Cloudflare Turnstile), free tiers cover early-stage volume
+- **Independent public board per product**: subdomain-based, each with its own branding — users vote, track progress, and get emailed when a maintainer replies
+- **Framework-agnostic embed widget**: a single `<script>` tag works on any product page regardless of tech stack
+- MIT licensed — self-host it, fork it, send PRs
+
+Tech choices and the decision process live in [docs/decisions](docs/decisions); why not just use Canny/Fider/Astuto/Quackback is covered in [0001](docs/decisions/0001-self-build-vs-saas-vs-oss.md).
+
+## Docs index
+
+| Doc | Contents |
+|---|---|
+| [docs/decisions/0001](docs/decisions/0001-self-build-vs-saas-vs-oss.md) | Self-build vs SaaS vs open-source comparison and decision |
+| [docs/decisions/0002](docs/decisions/0002-tech-stack.md) | Tech stack and monorepo package layout |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module boundaries, multi-tenant routing, event-driven notifications, security boundaries |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | ER diagram, table DDL, RLS policies |
+| [docs/API.md](docs/API.md) | Public endpoints, admin endpoints, widget init params, notification event contract |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | Playbook for wiring FeedbackPort into a specific product (framework snippets + troubleshooting + an AI-assistant prompt template) |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | MVP scope, open-source release prep, later phases |
+
+## Project structure
+
+```
+├── apps/web/            # Next.js: public board + admin console + API Routes
+├── packages/core/        # shared types, zod validation schemas, business-rule constants
+├── packages/widget/      # framework-agnostic embed widget
+├── supabase/
+│   ├── migrations/       # database migrations
+│   └── functions/        # Edge Functions (notifications, etc.)
+└── docs/
+```
+
+## Local development
+
+```bash
+pnpm install
+pnpm -r typecheck
+pnpm -r lint
+pnpm -r test
+pnpm dev   # start apps/web
+```
+
+## Current status
+
+The four public feedback API endpoints (submit / vote / list / detail) are wired to real Supabase reads/writes with the full three-layer anti-abuse pipeline (honeypot + Turnstile + Redis rate limiting). Not built yet: the public board / admin console page UI, email notifications (`notify-submitter` is still a stub), and admin login. See the Phase 0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md) for current progress.
+
+## License
+
+MIT
+
+---
+
+# FeedbackPort（中文）
+
 面向**独立开发者**的用户反馈管理系统：一个人、多个产品、一个统一收件箱。
 
 不同于 Canny / Fider / Astuto / Quackback 这类"一个组织服务多个客户"的反馈平台，FeedbackPort 假设的场景是"一个开发者名下有好几个不相关的产品，需要一个地方统一看、统一管"。核心特点：

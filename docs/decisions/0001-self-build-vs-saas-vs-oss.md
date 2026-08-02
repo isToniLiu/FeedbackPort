@@ -1,4 +1,71 @@
-# ADR 0001：自建 vs SaaS vs 开源方案
+# ADR 0001: Self-Build vs SaaS vs Open Source
+
+- Status: Accepted
+- Date: 2026-08-02
+
+## Context
+
+A solo indie developer needs to manage user feedback across several products (web/apps) in one place. Core constraints:
+
+- Every product is early-stage, so feedback volume is inherently small
+- The decision-maker has engineering skills — where time cost is cheaper than money cost, self-building should win
+- The system needs to support: a public voting board, per-product independent entry points (subdomains), two-way email communication, basic anti-abuse, and unified multi-product management
+
+## Options compared
+
+### Commercial SaaS (Canny / Featurebase)
+
+| Option | Money cost | Ops cost | Fits when |
+|---|---|---|---|
+| Featurebase Free | $0/mo, 1 seat | Zero setup, but crippled (help-center rate limits, no custom domain) | Want to use it right now, don't want to write code |
+| Canny | Billed by "tracked users," starts at $19/mo past 25 users, can hit $250+/mo at 1000+ users | Near-zero maintenance | Already have a stable paying user base, need a polished feel |
+| Featurebase Paid | Seat-based, starts at $29 | Near-zero maintenance | Same as above |
+
+**Reason for rejection**: SaaS pricing by "tracked users" or "seats" is poor value when feedback volume is inherently small at an early stage — you're effectively prepaying for growth that hasn't happened. It also requires separate payment/configuration per product, so cost scales linearly across multiple products.
+
+### Open-source, self-hosted (Fider / Astuto / Quackback)
+
+| Project | Stars | Stack | License | Multi-tenant/subdomain | Notes |
+|---|---|---|---|---|---|
+| [Fider](https://github.com/getfider/fider) | 4.4k | Go + React/TS, PostgreSQL | AGPL-3.0 (verified against the source LICENSE file — not MIT, as some articles mistakenly claim) | Native support, per-tenant subdomain + branding | Most production deployments, most mature, single Go binary |
+| [Astuto](https://github.com/astuto/astuto) | Moderate | Ruby on Rails + React | GPL-3.0 | Undocumented | Explicitly positioned as a Canny clone; Rails stack adds a learning-curve cost |
+| [Quackback](https://github.com/QuackbackIO/quackback) | 207 | TanStack Start + Drizzle + Postgres + Redis + Bun | AGPL-3.0 | Undocumented | Newest, most modern stack, has AI dedup and an MCP server, but maturity is unproven |
+
+**Reason for rejection**:
+
+1. **Ops burden**: all three require a standing server running Docker + Postgres (Quackback also needs Redis) — not fully serverless, which creates ongoing ops responsibility and roughly $5-6/mo in VPS cost, conflicting with the "zero maintenance" goal.
+2. **License constraints**: Fider/Astuto/Quackback are all AGPL-3.0/GPL-3.0. If forked and customized (rebranded per product, extra fields) and served to end users over a network, AGPL §13 requires publishing the modified source. That conflicts with this project's own goal of being open source itself while retaining freedom to customize deployment configuration.
+3. **Scenario mismatch**: their multi-tenancy is designed for "one organization serving many customers" (a SaaS vendor's perspective), not "one indie developer managing several unrelated products of their own" (a unified-inbox perspective). The latter needs a cross-product aggregate view, which none of the existing projects cover.
+
+### Self-build (final choice)
+
+**Conclusion: self-build a lightweight, fully serverless feedback-management engine.**
+
+Reasoning chain: early-stage product → inherently low feedback volume → SaaS pricing by user count/seats is poor value → the developer can code → the one-time cost of self-building is far lower than either prepaying for growth long-term or operating a server.
+
+**Borrow ideas from the open-source projects rather than adopting them wholesale**:
+
+- Borrow Fider's multi-tenant subdomain routing idea (one codebase, subdomain mapped to `product_id`)
+- Borrow Quackback's AI-dedup idea (reserve an `embedding` column, not implemented at MVP, backfilled later with pgvector)
+- Don't adopt their tech stacks (to avoid a standing server) or their licenses (to avoid AGPL obligations)
+
+## Additional decision: open-sourcing this project itself
+
+During the discussion it was decided that, beyond serving personal needs, this project would also be published as an indie developer's portfolio/open-source work. That adds requirements:
+
+- Strict separation between the engine (the multi-tenant core) and this developer's own private product data/configuration — the former goes into the public repo, the latter lives as private deployment configuration (see [0002-tech-stack](0002-tech-stack.md) and the tenant-configuration section of ARCHITECTURE.md)
+- License: MIT (rather than following Fider/Quackback into AGPL). Rationale: this project's goal is to attract users/contributors and build a portfolio piece — AGPL's network-service disclosure obligation actively discourages developers from adopting it directly, which is a net negative for that goal
+- Differentiated positioning: built for an indie developer "managing many products alone," not the "one organization serving many customers" enterprise scenario — concretely expressed as a cross-product unified inbox, a framework-agnostic embed widget, and a zero-standing-server architecture (see ROADMAP.md for details)
+
+## Consequences
+
+- Vote deduplication, anti-abuse, email notifications, and other capabilities Fider/Astuto/Quackback already have must be built from scratch, so upfront development effort is higher than "just deploy an existing project"
+- Long-term, if feedback volume or team size outgrows what the self-built system can handle, Fider is the safest migration path (most production deployments, most complete docs)
+- In exchange, this project gets full freedom over its tech stack and license, and can be polished to open-source-portfolio standards (README, CI, ADRs, a demo)
+
+---
+
+# ADR 0001：自建 vs SaaS vs 开源方案（中文）
 
 - 状态：已采纳
 - 日期：2026-08-02
