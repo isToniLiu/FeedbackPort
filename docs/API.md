@@ -92,6 +92,15 @@ Not a REST endpoint — a Supabase DB webhook configuration:
 
 The Edge Function's input is the standard Supabase webhook payload (`{ type, table, record, old_record }`) — no extra request schema needs to be designed.
 
+**One-time setup this repo can't automate**: the webhook itself has to be created by hand in Supabase Studio (Database → Webhooks → New webhook → table `replies` → event `Insert` → target `notify-submitter`, then repeat for table `feedback` → event `Update`). It can't ship as a migration because the Edge Function's URL is project-specific — every self-hosted instance has a different one. The function also needs two secrets set (`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by Supabase; only `RESEND_API_KEY` and, optionally, `NOTIFY_FROM_EMAIL` need to be set by hand):
+
+```bash
+supabase secrets set RESEND_API_KEY=re_xxx
+supabase secrets set NOTIFY_FROM_EMAIL=notifications@your-domain.com
+```
+
+Without `RESEND_API_KEY`, the function no-ops (logs a warning and skips sending) instead of erroring, so the rest of the system keeps working if you haven't wired up email yet.
+
 ---
 
 # API 设计（中文）
@@ -187,3 +196,12 @@ The Edge Function's input is the standard Supabase webhook payload (`{ type, tab
 | `feedback` 表 update 且 `status` 变更 | `notify-submitter` | 发送"反馈状态变更为 XXX"邮件给提交者和所有投票者（去重后的邮箱集合） |
 
 Edge Function 输入是 Supabase Webhook 的标准 payload（`{ type, table, record, old_record }`），不需要额外设计请求 schema。
+
+**这个仓库自动化不了的一次性配置**：Webhook 本身要在 Supabase Studio 里手动建（Database → Webhooks → New webhook → 表选 `replies` → 事件选 `Insert` → 目标选 `notify-submitter`，再对表 `feedback` → 事件 `Update` 建一次）。写不进迁移脚本，因为 Edge Function 的 URL 是项目专属的，每个自部署实例都不一样。这个 Function 还需要设两个 secret（`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 是 Supabase 自动注入的，只有 `RESEND_API_KEY` 和可选的 `NOTIFY_FROM_EMAIL` 需要手动设置）：
+
+```bash
+supabase secrets set RESEND_API_KEY=re_xxx
+supabase secrets set NOTIFY_FROM_EMAIL=notifications@你的域名.com
+```
+
+没配 `RESEND_API_KEY` 时函数不会报错，只是记一条 warning 并跳过发信——邮件通知没接好之前，系统其余部分照样能用。

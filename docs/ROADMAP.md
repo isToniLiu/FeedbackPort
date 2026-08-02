@@ -9,7 +9,8 @@
 - [x] Public board UI: list/submit/vote at `/board`, detail + replies at `/board/[id]` (`apps/web/src/app/board/**`) — Turnstile token acquisition is still the same placeholder TODO as the widget, real integration pending
 - [x] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), plus Supabase Auth magic-link login (`apps/web/src/app/admin/**`, `apps/web/src/app/login`)
 - [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
-- [ ] Event-driven email notifications (DB webhook → Edge Function → Resend) — `notify-submitter` is currently just a one-line-log stub
+- [x] Event-driven email notifications: `notify-submitter` now queries Supabase and calls Resend for real (`supabase/functions/notify-submitter/index.ts`); the Database Webhook itself and the `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` secrets still need to be set up by hand per project, see the deployment note in API.md
+- [ ] Real Turnstile token acquisition in the widget and board (currently a shared placeholder) — needs the vote flow's `window.prompt` reworked into an inline form first, since Turnstile needs a persistent DOM container to render into
 - [ ] At least 2 of this developer's own products integrated as validation (needs real Supabase/Turnstile/Upstash/Resend projects + a deployment)
 
 **Acceptance criteria**: this developer's own products can actually receive feedback, votes don't duplicate, users get emailed on status changes, and the unified inbox shows every product's new feedback at a glance.
@@ -59,7 +60,8 @@
 - [x] 公开面板 UI：`/board` 列表+提交+投票，`/board/[id]` 详情+回复（`apps/web/src/app/board/**`）——Turnstile token 获取还是和 widget 一样的占位 TODO，真正接入还没做
 - [x] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含 Supabase Auth magic link 登录（`apps/web/src/app/admin/**`、`apps/web/src/app/login`）
 - [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
-- [ ] 事件驱动邮件通知（DB Webhook → Edge Function → Resend），`notify-submitter` 目前只是 log 一行的 stub
+- [x] 事件驱动邮件通知：`notify-submitter` 现在真的查 Supabase、调 Resend 发信了（`supabase/functions/notify-submitter/index.ts`）；Database Webhook 本身和 `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` 这两个 secret 还是要每个项目手动配一次，见 API.md 里的部署说明
+- [ ] widget 和 board 真正接入 Turnstile（现在共用一个占位 token）——得先把投票流程里的 `window.prompt` 换成内联表单，因为 Turnstile 需要一个常驻的 DOM 容器才能渲染
 - [ ] 至少 2 个自己的产品接入验证（需要真实 Supabase/Turnstile/Upstash/Resend 项目 + 部署）
 
 **验收标准**：自己的产品能实际收到反馈、投票不重复、状态变更用户能收到邮件、跨产品收件箱能一眼看完所有产品的新反馈。
