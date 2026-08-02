@@ -28,7 +28,7 @@
 }
 ```
 
-处理顺序：蜜罐检查 → Turnstile 校验 → IP 频率限制（Redis）→ zod schema 校验（`packages/core`）→ 写入 `feedback` 表。
+处理顺序：zod schema 校验（`packages/core`，要先解出各字段才有蜜罐值可查）→ 蜜罐检查 → Turnstile 校验 → IP 频率限制（Redis）→ 按 `productSlug` 解析租户 → 写入 `feedback` 表。
 
 响应：`201 { id, status: 'open' }`
 
@@ -40,8 +40,9 @@
 
 ### `POST /api/feedback/:id/vote` 投票
 
-- board 发起（同源）：请求体 `{ voterEmail: string; turnstileToken: string }`，租户已由 `x-tenant` 确定
-- widget 发起（跨域，若在宿主页面内嵌投票入口）：请求体额外带 `productSlug`，理由同提交反馈
+请求体：`{ productSlug: string; voterEmail: string; turnstileToken: string }`
+
+- 不区分 board/widget 调用方，统一要求 `productSlug`——写入前用它二次核对该 `feedback_id` 确实属于这个租户，防止跨租户猜测 id 投票，比"同源请求就信任 x-tenant"更保守，代价是board 发起时也要多带这一个字段，用一套 schema/一条代码路径换来的简单性划算
 - 唯一约束冲突（已投过票）时返回 `200 { alreadyVoted: true }`，不当作错误处理
 - 频率限制门槛比提交反馈更宽松，但同样过 Turnstile
 

@@ -19,6 +19,7 @@ function bootstrap(): void {
       body: formPayload.body || undefined,
       submitterEmail: formPayload.submitterEmail,
       turnstileToken,
+      honeypot: formPayload.honeypot || undefined,
     });
   });
 }

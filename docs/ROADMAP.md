@@ -2,14 +2,15 @@
 
 ## Phase 0：MVP（自用可跑通）
 
-- [ ] `products` / `feedback` / `votes` / `replies` 表 + RLS 策略（见 DATA_MODEL.md）
+- [x] `products` / `feedback` / `votes` / `replies` 表 + RLS 策略（见 DATA_MODEL.md）
 - [ ] 管理后台"新增产品"表单（slug/name/brand_color），没有这一步接入指南无从谈起
-- [ ] 无框架嵌入组件（vanilla TS，Shadow DOM，蜜罐字段）
-- [ ] 公开面板：按子域名解析租户、列表+投票+详情+回复展示
-- [ ] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计）
-- [ ] 防刷三层：蜜罐 + Turnstile + Redis 频率限制
-- [ ] 事件驱动邮件通知（DB Webhook → Edge Function → Resend）
-- [ ] 至少 2 个自己的产品接入验证
+- [x] 无框架嵌入组件（vanilla TS，Shadow DOM，蜜罐字段）
+- [x] 公开端点：提交反馈 / 投票 / 列表 / 详情（`apps/web/src/app/api/feedback/**`），API 层已接 Supabase 真实读写
+- [ ] 公开面板 UI：按子域名解析租户后渲染列表/投票/详情/回复的页面（API 已就绪，页面还没写）
+- [ ] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含登录态
+- [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
+- [ ] 事件驱动邮件通知（DB Webhook → Edge Function → Resend），`notify-submitter` 目前只是 log 一行的 stub
+- [ ] 至少 2 个自己的产品接入验证（需要真实 Supabase/Turnstile/Upstash/Resend 项目 + 部署）
 
 **验收标准**：自己的产品能实际收到反馈、投票不重复、状态变更用户能收到邮件、跨产品收件箱能一眼看完所有产品的新反馈。
 

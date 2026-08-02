@@ -4,6 +4,7 @@ export interface FormSubmitPayload {
   title: string;
   body: string;
   submitterEmail: string;
+  honeypot: string;
 }
 
 /**
@@ -44,12 +45,18 @@ export function mountWidget(
         width: 100%; padding: 8px; border: none; border-radius: 6px;
         background: #6366f1; color: white; cursor: pointer;
       }
+      /* 蜜罐字段：视觉隐藏但仍存在于 DOM/tab 顺序之外，正常用户看不到也填不到，
+         简单脚本容易照单全收，见 docs/ARCHITECTURE.md 防刷三层设计 */
+      .fh-hp {
+        position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;
+      }
     </style>
     <button class="fh-button" type="button">反馈</button>
     <form class="fh-panel">
       <input name="title" placeholder="一句话描述你的想法" required maxlength="120" />
       <textarea name="body" placeholder="更多细节（选填）" maxlength="2000"></textarea>
       <input name="submitterEmail" type="email" placeholder="你的邮箱" required value="${config.userEmail ?? ""}" />
+      <input class="fh-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
       <button type="submit">提交</button>
     </form>
   `;
@@ -66,6 +73,7 @@ export function mountWidget(
       title: String(formData.get("title") ?? ""),
       body: String(formData.get("body") ?? ""),
       submitterEmail: String(formData.get("submitterEmail") ?? ""),
+      honeypot: String(formData.get("website") ?? ""),
     }).then(() => panel.classList.remove("open"));
   });
 }

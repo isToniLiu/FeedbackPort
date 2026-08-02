@@ -71,14 +71,14 @@ sequenceDiagram
 
 ### 提交反馈
 
-1. widget 收集表单内容 + Turnstile token
-2. API Route 校验 Turnstile → 检查 Redis 频率限制（按 IP hash）→ 校验 `core` 中的 zod schema → 写入 `feedback` 表
+1. widget 收集表单内容（含蜜罐字段）+ Turnstile token
+2. API Route 校验 `core` 中的 zod schema（先解出字段才有蜜罐值可查）→ 蜜罐非空则静默假成功返回 → 校验 Turnstile → 检查 Redis 频率限制（按 IP hash）→ 按 `productSlug` 解析租户 → 写入 `feedback` 表
 3. 返回结果给 widget，不触发任何通知（首次提交无需通知提交者本人）
 
 ### 投票
 
-1. board 提交 `voter_email` + Turnstile token（投票门槛比提交反馈低，但仍需基础校验防止脚本刷票）
-2. API Route 校验后，向 `votes` 表插入一行，利用 `(feedback_id, voter_email)` 唯一约束天然去重，冲突时返回"已投过票"而不是报错中断
+1. widget/board 提交 `feedback_id` 所属租户的 `productSlug` + `voter_email` + Turnstile token（投票门槛比提交反馈低，但仍需基础校验防止脚本刷票）
+2. API Route 校验后，二次核对该 `feedback_id` 确实属于 `productSlug` 解析出的租户（防止跨租户猜测 id 投票），再向 `votes` 表插入一行，利用 `(feedback_id, voter_email)` 唯一约束天然去重，冲突时返回"已投过票"而不是报错中断
 
 ### 管理员回复 / 状态变更
 

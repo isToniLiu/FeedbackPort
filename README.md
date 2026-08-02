@@ -48,7 +48,7 @@ pnpm dev   # 启动 apps/web
 
 ## 当前状态
 
-Monorepo 骨架已搭好（`pnpm install`/`typecheck`/`lint`/`test` 均可跑通），核心业务逻辑（Supabase 读写、防刷三层、邮件通知）还在实现中。当前进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
+提交反馈 / 投票 / 列表 / 详情四个公开 API 端点已经接通真实的 Supabase 读写和防刷三层（蜜罐 + Turnstile + Redis 限流）。还没做的：公开面板 / 管理后台的页面 UI、邮件通知（`notify-submitter` 还是 stub）、管理后台登录态。当前进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
 
 ## License
 
