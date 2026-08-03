@@ -12,10 +12,14 @@ export interface FormSubmitPayload {
  * 目前只是最小可用骨架：一个悬浮按钮 + 一个内联表单，没有做过渡动画/多步骤 UI，
  * 后续迭代（见 docs/ROADMAP.md）在此基础上扩展。
  */
+export interface MountedWidget {
+  turnstileContainer: HTMLElement;
+}
+
 export function mountWidget(
   config: WidgetConfig,
   onSubmit: (payload: FormSubmitPayload) => Promise<void>,
-): void {
+): MountedWidget {
   const host = document.createElement("div");
   host.id = "feedbackport-widget-root";
   document.body.appendChild(host);
@@ -57,12 +61,14 @@ export function mountWidget(
       <textarea name="body" placeholder="更多细节（选填）" maxlength="2000"></textarea>
       <input name="submitterEmail" type="email" placeholder="你的邮箱" required value="${config.userEmail ?? ""}" />
       <input class="fh-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <div class="fh-turnstile"></div>
       <button type="submit">提交</button>
     </form>
   `;
 
   const button = shadow.querySelector<HTMLButtonElement>(".fh-button")!;
   const panel = shadow.querySelector<HTMLFormElement>(".fh-panel")!;
+  const turnstileContainer = shadow.querySelector<HTMLDivElement>(".fh-turnstile")!;
 
   button.addEventListener("click", () => panel.classList.toggle("open"));
 
@@ -76,4 +82,6 @@ export function mountWidget(
       honeypot: String(formData.get("website") ?? ""),
     }).then(() => panel.classList.remove("open"));
   });
+
+  return { turnstileContainer };
 }

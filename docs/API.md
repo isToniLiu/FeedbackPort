@@ -75,10 +75,17 @@ Request body: `{ body: string }`
 How a host page embeds it:
 
 ```html
-<script src="https://cdn.domain.com/widget.js" data-product="cardwhisper" data-user-email="user@example.com" async></script>
+<script
+  src="https://cdn.domain.com/widget.js"
+  data-product="cardwhisper"
+  data-turnstile-site-key="1x00000000000000000000AA"
+  data-user-email="user@example.com"
+  async
+></script>
 ```
 
 - `data-product`: required, corresponds to `products.slug`
+- `data-turnstile-site-key`: required, your Cloudflare Turnstile site key. For local development, Cloudflare publishes a well-known test key that always passes — `1x00000000000000000000AA` — so you don't need a real Cloudflare account to try the widget end to end
 - `data-user-email`: optional — the host product's logged-in user's email, pre-fills the submission form so the user doesn't have to type it again (this is a lightweight substitute for a real SSO integration; the host page decides whether to pass it, and the widget performs no identity verification on it)
 
 ## Event-driven notification contract
@@ -180,10 +187,17 @@ Without `RESEND_API_KEY`, the function no-ops (logs a warning and skips sending)
 宿主页面嵌入方式：
 
 ```html
-<script src="https://cdn.域名.com/widget.js" data-product="cardwhisper" data-user-email="user@example.com" async></script>
+<script
+  src="https://cdn.域名.com/widget.js"
+  data-product="cardwhisper"
+  data-turnstile-site-key="1x00000000000000000000AA"
+  data-user-email="user@example.com"
+  async
+></script>
 ```
 
 - `data-product`：必填，对应 `products.slug`
+- `data-turnstile-site-key`：必填，你的 Cloudflare Turnstile site key。本地开发不需要真实 Cloudflare 账号——Cloudflare 官方发布了一个永远通过验证的测试 key：`1x00000000000000000000AA`，用这个就能把 widget 端到端跑通
 - `data-user-email`：选填，宿主产品已登录用户的邮箱，预填提交表单，免去用户重复输入（这是替代真正 SSO 集成的轻量方案，宿主页面自行决定是否传递，widget 不做身份校验）
 
 ## 事件驱动通知契约

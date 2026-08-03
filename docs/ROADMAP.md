@@ -6,11 +6,11 @@
 - [x] Admin console "new product" form (slug/name/brand_color) — `apps/web/src/app/admin/products/new`
 - [x] Framework-agnostic embed widget (vanilla TS, Shadow DOM, honeypot field)
 - [x] Public endpoints: submit feedback / vote / list / detail (`apps/web/src/app/api/feedback/**`) — the API layer is wired to real Supabase reads/writes
-- [x] Public board UI: list/submit/vote at `/board`, detail + replies at `/board/[id]` (`apps/web/src/app/board/**`) — Turnstile token acquisition is still the same placeholder TODO as the widget, real integration pending
+- [x] Public board UI: list/submit/vote at `/board`, detail + replies at `/board/[id]` (`apps/web/src/app/board/**`)
 - [x] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), plus Supabase Auth magic-link login (`apps/web/src/app/admin/**`, `apps/web/src/app/login`)
 - [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
 - [x] Event-driven email notifications: `notify-submitter` now queries Supabase and calls Resend for real (`supabase/functions/notify-submitter/index.ts`); the Database Webhook itself and the `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` secrets still need to be set up by hand per project, see the deployment note in API.md
-- [ ] Real Turnstile token acquisition in the widget and board (currently a shared placeholder) — needs the vote flow's `window.prompt` reworked into an inline form first, since Turnstile needs a persistent DOM container to render into
+- [x] Real Turnstile token acquisition in both the widget (Shadow DOM, `packages/widget/src/turnstile.ts`) and the board (`apps/web/src/lib/turnstile-client.ts`) — the vote flow was reworked from `window.prompt` into an inline form (`apps/web/src/app/board/vote-button.tsx`) since Turnstile needs a persistent DOM container to render into. Requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `data-turnstile-site-key` — Cloudflare's public test key `1x00000000000000000000AA` works for local dev
 - [ ] At least 2 of this developer's own products integrated as validation (needs real Supabase/Turnstile/Upstash/Resend projects + a deployment)
 
 **Acceptance criteria**: this developer's own products can actually receive feedback, votes don't duplicate, users get emailed on status changes, and the unified inbox shows every product's new feedback at a glance.
@@ -57,11 +57,11 @@
 - [x] 管理后台"新增产品"表单（slug/name/brand_color）——`apps/web/src/app/admin/products/new`
 - [x] 无框架嵌入组件（vanilla TS，Shadow DOM，蜜罐字段）
 - [x] 公开端点：提交反馈 / 投票 / 列表 / 详情（`apps/web/src/app/api/feedback/**`），API 层已接 Supabase 真实读写
-- [x] 公开面板 UI：`/board` 列表+提交+投票，`/board/[id]` 详情+回复（`apps/web/src/app/board/**`）——Turnstile token 获取还是和 widget 一样的占位 TODO，真正接入还没做
+- [x] 公开面板 UI：`/board` 列表+提交+投票，`/board/[id]` 详情+回复（`apps/web/src/app/board/**`）
 - [x] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含 Supabase Auth magic link 登录（`apps/web/src/app/admin/**`、`apps/web/src/app/login`）
 - [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
 - [x] 事件驱动邮件通知：`notify-submitter` 现在真的查 Supabase、调 Resend 发信了（`supabase/functions/notify-submitter/index.ts`）；Database Webhook 本身和 `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` 这两个 secret 还是要每个项目手动配一次，见 API.md 里的部署说明
-- [ ] widget 和 board 真正接入 Turnstile（现在共用一个占位 token）——得先把投票流程里的 `window.prompt` 换成内联表单，因为 Turnstile 需要一个常驻的 DOM 容器才能渲染
+- [x] widget（Shadow DOM，`packages/widget/src/turnstile.ts`）和 board（`apps/web/src/lib/turnstile-client.ts`）都接了真实 Turnstile——投票流程也从 `window.prompt` 改成了内联表单（`apps/web/src/app/board/vote-button.tsx`），因为 Turnstile 需要一个常驻的 DOM 容器才能渲染。需要 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `data-turnstile-site-key`，本地开发可以用 Cloudflare 官方测试 key `1x00000000000000000000AA`
 - [ ] 至少 2 个自己的产品接入验证（需要真实 Supabase/Turnstile/Upstash/Resend 项目 + 部署）
 
 **验收标准**：自己的产品能实际收到反馈、投票不重复、状态变更用户能收到邮件、跨产品收件箱能一眼看完所有产品的新反馈。

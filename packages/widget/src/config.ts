@@ -5,6 +5,7 @@ export interface WidgetConfig {
   productSlug: string;
   userEmail?: string;
   apiBase: string;
+  turnstileSiteKey: string;
 }
 
 const DEFAULT_API_BASE = "https://api.feedbackport.example.com";
@@ -23,9 +24,15 @@ export function readConfig(script: HTMLOrSVGScriptElement | null): WidgetConfig 
     throw new WidgetConfigError("缺少必填的 data-product 属性，见 docs/INTEGRATION.md");
   }
 
+  const turnstileSiteKey = (script as HTMLScriptElement).dataset.turnstileSiteKey;
+  if (!turnstileSiteKey) {
+    throw new WidgetConfigError("缺少必填的 data-turnstile-site-key 属性，见 docs/INTEGRATION.md");
+  }
+
   return {
     productSlug,
     userEmail: (script as HTMLScriptElement).dataset.userEmail || undefined,
     apiBase: (script as HTMLScriptElement).dataset.apiBase || DEFAULT_API_BASE,
+    turnstileSiteKey,
   };
 }

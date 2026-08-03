@@ -24,9 +24,12 @@ Add one line before `</body>`:
 <script
   src="https://cdn.your-domain.com/widget.js"
   data-product="cardwhisper"
+  data-turnstile-site-key="1x00000000000000000000AA"
   async
 ></script>
 ```
+
+`data-turnstile-site-key` is required — see [API.md](API.md#widget-init-parameters) for why, and note that `1x00000000000000000000AA` is Cloudflare's public test key (always passes), handy for trying this out before you have a real Turnstile site.
 
 No extra init code needed — the script mounts a floating feedback entry point on its own.
 
@@ -37,22 +40,31 @@ No extra init code needed — the script mounts a floating feedback entry point 
 'use client';
 import { useEffect } from 'react';
 
-export function FeedbackWidget({ productSlug, userEmail }: { productSlug: string; userEmail?: string }) {
+export function FeedbackWidget({
+  productSlug,
+  turnstileSiteKey,
+  userEmail,
+}: {
+  productSlug: string;
+  turnstileSiteKey: string;
+  userEmail?: string;
+}) {
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdn.your-domain.com/widget.js';
     script.async = true;
     script.dataset.product = productSlug;
+    script.dataset.turnstileSiteKey = turnstileSiteKey;
     if (userEmail) script.dataset.userEmail = userEmail;
     document.body.appendChild(script);
     return () => { document.body.removeChild(script); };
-  }, [productSlug, userEmail]);
+  }, [productSlug, turnstileSiteKey, userEmail]);
 
   return null;
 }
 ```
 
-Usage: `<FeedbackWidget productSlug="cardwhisper" userEmail={session?.user?.email} />`, dropped into the root layout to take effect site-wide.
+Usage: `<FeedbackWidget productSlug="cardwhisper" turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!} userEmail={session?.user?.email} />`, dropped into the root layout to take effect site-wide.
 
 ## Vue
 
@@ -60,13 +72,14 @@ Usage: `<FeedbackWidget productSlug="cardwhisper" userEmail={session?.user?.emai
 <script setup lang="ts">
 import { onMounted } from 'vue';
 
-const props = defineProps<{ productSlug: string; userEmail?: string }>();
+const props = defineProps<{ productSlug: string; turnstileSiteKey: string; userEmail?: string }>();
 
 onMounted(() => {
   const script = document.createElement('script');
   script.src = 'https://cdn.your-domain.com/widget.js';
   script.async = true;
   script.dataset.product = props.productSlug;
+  script.dataset.turnstileSiteKey = props.turnstileSiteKey;
   if (props.userEmail) script.dataset.userEmail = props.userEmail;
   document.body.appendChild(script);
 });
@@ -110,6 +123,7 @@ For routine new-product integrations, hand the following to an AI coding assista
 Help me integrate the FeedbackPort feedback widget into this project.
 
 - The FeedbackPort product slug is: {cardwhisper}
+- The Cloudflare Turnstile site key is: {your site key, or 1x00000000000000000000AA for local testing}
 - This project's tech stack is: {Next.js App Router / plain static HTML / Vue / ...}
 - Reference the integration guide at: https://github.com/{your-repo}/blob/main/docs/INTEGRATION.md
 - If this project has a logged-in state, pass the current user's email to the widget's data-user-email
@@ -147,9 +161,12 @@ values ('cardwhisper', 'CardWhisper', '#6366f1');
 <script
   src="https://cdn.你的域名.com/widget.js"
   data-product="cardwhisper"
+  data-turnstile-site-key="1x00000000000000000000AA"
   async
 ></script>
 ```
+
+`data-turnstile-site-key` 是必填的，为什么见 [API.md](API.md#widget-初始化参数)；`1x00000000000000000000AA` 是 Cloudflare 官方的公开测试 key（永远通过），在还没有真实 Turnstile site 之前先用这个跑通。
 
 不需要额外初始化代码，脚本自己会在页面上挂一个悬浮反馈入口。
 
@@ -160,22 +177,31 @@ values ('cardwhisper', 'CardWhisper', '#6366f1');
 'use client';
 import { useEffect } from 'react';
 
-export function FeedbackWidget({ productSlug, userEmail }: { productSlug: string; userEmail?: string }) {
+export function FeedbackWidget({
+  productSlug,
+  turnstileSiteKey,
+  userEmail,
+}: {
+  productSlug: string;
+  turnstileSiteKey: string;
+  userEmail?: string;
+}) {
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://cdn.你的域名.com/widget.js';
     script.async = true;
     script.dataset.product = productSlug;
+    script.dataset.turnstileSiteKey = turnstileSiteKey;
     if (userEmail) script.dataset.userEmail = userEmail;
     document.body.appendChild(script);
     return () => { document.body.removeChild(script); };
-  }, [productSlug, userEmail]);
+  }, [productSlug, turnstileSiteKey, userEmail]);
 
   return null;
 }
 ```
 
-用法：`<FeedbackWidget productSlug="cardwhisper" userEmail={session?.user?.email} />`，放在根布局里即可全站生效。
+用法：`<FeedbackWidget productSlug="cardwhisper" turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!} userEmail={session?.user?.email} />`，放在根布局里即可全站生效。
 
 ## Vue
 
@@ -183,13 +209,14 @@ export function FeedbackWidget({ productSlug, userEmail }: { productSlug: string
 <script setup lang="ts">
 import { onMounted } from 'vue';
 
-const props = defineProps<{ productSlug: string; userEmail?: string }>();
+const props = defineProps<{ productSlug: string; turnstileSiteKey: string; userEmail?: string }>();
 
 onMounted(() => {
   const script = document.createElement('script');
   script.src = 'https://cdn.你的域名.com/widget.js';
   script.async = true;
   script.dataset.product = props.productSlug;
+  script.dataset.turnstileSiteKey = props.turnstileSiteKey;
   if (props.userEmail) script.dataset.userEmail = props.userEmail;
   document.body.appendChild(script);
 });
@@ -233,6 +260,7 @@ widget 请求 API 是跨域请求（宿主域名 ≠ FeedbackPort 域名），�
 帮我把 FeedbackPort 反馈组件接入这个项目。
 
 - FeedbackPort 的 product slug 是：{cardwhisper}
+- Cloudflare Turnstile 的 site key 是：{你的 site key，本地测试可以用 1x00000000000000000000AA}
 - 这个项目的技术栈是：{Next.js App Router / 纯静态 HTML / Vue / ...}
 - 参考接入方式见：https://github.com/{你的仓库}/blob/main/docs/INTEGRATION.md
 - 如果项目里有登录态，把当前登录用户的邮箱传给 widget 的 data-user-email

@@ -2,7 +2,9 @@
 
 import { FEEDBACK_STATUSES } from "@feedbackport/core";
 import Link from "next/link";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { getTurnstileToken } from "@/lib/turnstile-client";
+import { VoteButton } from "./vote-button";
 
 interface FeedbackListItem {
   id: string;
@@ -12,12 +14,6 @@ interface FeedbackListItem {
   submitter_email: string;
   created_at: string;
   votes: { count: number }[];
-}
-
-// TODO（见 docs/ROADMAP.md Phase 0，跟 packages/widget/src/main.ts 的同名 TODO 一致）：
-// 接入真实 Cloudflare Turnstile 脚本获取 token，上线前必须替换。
-function getTurnstileToken(): Promise<string> {
-  return Promise.resolve("__TODO_TURNSTILE_TOKEN__");
 }
 
 export function BoardList({ productSlug }: { productSlug: string }) {
@@ -39,19 +35,6 @@ export function BoardList({ productSlug }: { productSlug: string }) {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
-
-  async function vote(feedbackId: string) {
-    const email = window.prompt("你的邮箱（用于投票去重，不会公开展示）：");
-    if (!email) return;
-
-    const turnstileToken = await getTurnstileToken();
-    await fetch(`/api/feedback/${feedbackId}/vote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productSlug, voterEmail: email, turnstileToken }),
-    });
-    void load();
-  }
 
   return (
     <main>
@@ -79,9 +62,7 @@ export function BoardList({ productSlug }: { productSlug: string }) {
               <Link href={`/board/${item.id}`}>{item.title}</Link>
               {" — "}
               {item.votes?.[0]?.count ?? 0} 票 · {item.status}
-              <button type="button" onClick={() => void vote(item.id)}>
-                投票
-              </button>
+              <VoteButton productSlug={productSlug} feedbackId={item.id} onVoted={load} />
             </li>
           ))}
         </ul>
@@ -90,41 +71,51 @@ export function BoardList({ productSlug }: { productSlug: string }) {
   );
 }
 
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
 function SubmitForm({ productSlug, onSubmitted }: { productSlug: string; onSubmitted: () => void }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
-    setError(null);
 
-    const turnstileToken = await getTurnstileToken();
-    const res = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productSlug,
-        title,
-        body: body || undefined,
-        submitterEmail: email,
-        turnstileToken,
-      }),
-    });
-
-    setSubmitting(false);
-
-    if (!res.ok) {
-      setError("提交失败，稍后再试");
+    if (!TURNSTILE_SITE_KEY || !turnstileContainerRef.current) {
+      setError("Turnstile 未配置（NEXT_PUBLIC_TURNSTILE_SITE_KEY），无法提交");
       return;
     }
 
-    setTitle("");
-    setBody("");
-    onSubmitted();
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const turnstileToken = await getTurnstileToken(turnstileContainerRef.current, TURNSTILE_SITE_KEY);
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productSlug,
+          title,
+          body: body || undefined,
+          submitterEmail: email,
+          turnstileToken,
+        }),
+      });
+
+      if (!res.ok) throw new Error("submit failed");
+
+      setTitle("");
+      setBody("");
+      onSubmitted();
+    } catch {
+      setError("提交失败，稍后再试");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -150,6 +141,7 @@ function SubmitForm({ productSlug, onSubmitted }: { productSlug: string; onSubmi
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
+      <div ref={turnstileContainerRef} />
       <button type="submit" disabled={submitting}>
         提交
       </button>

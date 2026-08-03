@@ -48,7 +48,7 @@ pnpm dev   # start apps/web
 
 ## Current status
 
-The four public feedback API endpoints (submit / vote / list / detail) are wired to real Supabase reads/writes with the full three-layer anti-abuse pipeline (honeypot + Turnstile + Redis rate limiting). The admin console is up (magic-link login, cross-product unified inbox, status changes, replies, new-product form), and so is the public board (`/board` list/submit/vote, `/board/[id]` detail/replies). Not built yet: real Turnstile token acquisition (both the widget and the board still use a placeholder) and email notifications (`notify-submitter` is still a stub). See the Phase 0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md) for current progress.
+All of Phase 0's code-only work is done: the public API (submit/vote/list/detail), the admin console (magic-link login, cross-product unified inbox, status changes, replies, new-product form), the public board (`/board`, `/board/[id]`), the three-layer anti-abuse pipeline with real Cloudflare Turnstile (both the widget and the board), and event-driven email notifications via Resend. What's left is either one-time manual setup per deployment (the Supabase Database Webhook, a few secrets — see the deployment note in [docs/API.md](docs/API.md)) or needs real accounts/a live deployment to validate (at least 2 real products integrated). See the Phase 0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md) for the full picture.
 
 ## License
 
@@ -106,7 +106,7 @@ pnpm dev   # 启动 apps/web
 
 ## 当前状态
 
-提交反馈 / 投票 / 列表 / 详情四个公开 API 端点已经接通真实的 Supabase 读写和防刷三层（蜜罐 + Turnstile + Redis 限流）。管理后台（magic link 登录、跨产品统一收件箱、改状态、写回复、新增产品表单）和公开面板（`/board` 列表/提交/投票，`/board/[id]` 详情/回复）都搭好了。还没做的：真正接入 Turnstile（widget 和 board 现在都还是占位 token）、邮件通知（`notify-submitter` 还是 stub）。当前进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
+Phase 0 里纯代码能搞定的部分都做完了：公开 API（提交/投票/列表/详情）、管理后台（magic link 登录、跨产品统一收件箱、改状态、写回复、新增产品表单）、公开面板（`/board`、`/board/[id]`）、防刷三层含真实 Cloudflare Turnstile（widget 和 board 都接了）、事件驱动邮件通知（真的调 Resend 发信）。剩下的要么是每个部署实例都要手动配一次的一次性设置（Supabase Database Webhook、几个 secret，见 [docs/API.md](docs/API.md) 里的部署说明），要么需要真实账号/实际部署才能验证（至少接入 2 个真实产品）。完整进度见 [docs/ROADMAP.md](docs/ROADMAP.md) 的 Phase 0 checklist。
 
 ## License
 
