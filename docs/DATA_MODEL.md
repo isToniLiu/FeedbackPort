@@ -124,6 +124,24 @@ create policy "anon can read replies" on replies
 -- writing an admin reply (is_admin = true) has no anon policy — only the service role can do it
 ```
 
+## Grants
+
+RLS policies decide *which rows* a role can touch; they don't grant access to the table at all — that's a separate, more basic Postgres permission. Some Supabase project configurations don't automatically grant `service_role` privileges on newly created tables, which shows up as `permission denied for table X` even though `service_role` is supposed to bypass RLS entirely. This must run after the tables exist:
+
+```sql
+grant usage on schema public to service_role, anon, authenticated;
+
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+
+-- anon/authenticated privileges mirror the RLS policies above:
+-- read everything, insert into feedback/votes, never change status or write an admin reply
+grant select on public.products to anon, authenticated;
+grant select, insert on public.feedback to anon, authenticated;
+grant select, insert on public.votes to anon, authenticated;
+grant select on public.replies to anon, authenticated;
+```
+
 ## Additional field notes
 
 - `submitter_email` / `voter_email`: there's no account system — the email address is the identity. For a user already logged into the host product, the host page pre-fills the email when it initializes the widget (see the widget init params in API.md); logged-out users type it in manually.
@@ -256,6 +274,24 @@ create policy "anon can read replies" on replies
   for select using (true);
 
 -- 写入管理员回复（is_admin = true）不给 anon 开策略，只能 service-role 执行
+```
+
+## 权限授予（GRANT）
+
+RLS policy 决定的是"这个角色能碰哪些行"，跟"这个角色能不能碰这张表"是两回事，后者是更基础的 Postgres 权限。有些 Supabase 项目配置下，新建的表不会自动给 `service_role` 授权，即便 `service_role` 理论上应该绕过 RLS——症状是报 `permission denied for table X`。建表之后要补跑这个：
+
+```sql
+grant usage on schema public to service_role, anon, authenticated;
+
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+
+-- anon/authenticated 的权限跟上面的 RLS policy 对应：
+-- 能读全部、能插入 feedback/votes，不能改 status、不能写管理员回复
+grant select on public.products to anon, authenticated;
+grant select, insert on public.feedback to anon, authenticated;
+grant select, insert on public.votes to anon, authenticated;
+grant select on public.replies to anon, authenticated;
 ```
 
 ## 字段说明补充
