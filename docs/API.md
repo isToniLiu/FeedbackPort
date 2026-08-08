@@ -99,14 +99,19 @@ Not a REST endpoint — a Supabase DB webhook configuration:
 
 The Edge Function's input is the standard Supabase webhook payload (`{ type, table, record, old_record }`) — no extra request schema needs to be designed.
 
-**One-time setup this repo can't automate**: the webhook itself has to be created by hand in Supabase Studio (Database → Webhooks → New webhook → table `replies` → event `Insert` → target `notify-submitter`, then repeat for table `feedback` → event `Update`). It can't ship as a migration because the Edge Function's URL is project-specific — every self-hosted instance has a different one. The function also needs two secrets set (`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by Supabase; only `RESEND_API_KEY` and, optionally, `NOTIFY_FROM_EMAIL` need to be set by hand):
+**One-time setup this repo can't automate** (verified against a real deployment — Supabase Studio has moved this around before, so if a menu item mentioned below isn't where you expect, search for "webhook"):
 
-```bash
-supabase secrets set RESEND_API_KEY=re_xxx
-supabase secrets set NOTIFY_FROM_EMAIL=notifications@your-domain.com
-```
-
-Without `RESEND_API_KEY`, the function no-ops (logs a warning and skips sending) instead of erroring, so the rest of the system keeps working if you haven't wired up email yet.
+1. **Deploy the Edge Function.** Supabase Studio → Edge Functions → create one named exactly `notify-submitter`, paste in `supabase/functions/notify-submitter/index.ts`, deploy.
+2. **Turn off "Verify JWT with legacy secret" for that function**, in its Settings tab. This function doesn't use Supabase's own JWT auth — and on newer projects using the `sb_publishable_`/`sb_secret_` key format, those keys aren't legacy-secret-signed JWTs anyway, so the check would just fail. Turning it off without adding anything else would leave the endpoint wide open to anyone who finds the URL (they could forge a webhook payload and turn your Resend account into an open relay), so the function checks its own shared secret instead — see step 4.
+3. **Set the function's secrets** (Edge Functions → Secrets; `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically, the rest need to be added by hand):
+   - `RESEND_API_KEY` — without this the function no-ops (logs a warning, skips sending) instead of erroring, so the rest of the system keeps working if email isn't wired up yet
+   - `NOTIFY_FROM_EMAIL` — an address at your verified sending domain
+   - `WEBHOOK_SECRET` — any random string (`openssl rand -hex 32` is fine); this is the shared secret from step 2
+4. **Create the Database Webhooks** — under Integrations → Database Webhooks (not directly under "Database" on newer Studio versions) → Webhooks tab → Create a new hook, twice:
+   - table `replies`, event `Insert`, type "Supabase Edge Functions", target `notify-submitter`
+   - table `feedback`, event `Update`, same target
+   
+   Both need an `x-webhook-secret` HTTP header set to the same value as `WEBHOOK_SECRET` above — this is the piece that can't ship as a migration or any other file in this repo, since the Edge Function's URL and the secret are project-specific.
 
 ---
 
@@ -211,11 +216,16 @@ Without `RESEND_API_KEY`, the function no-ops (logs a warning and skips sending)
 
 Edge Function 输入是 Supabase Webhook 的标准 payload（`{ type, table, record, old_record }`），不需要额外设计请求 schema。
 
-**这个仓库自动化不了的一次性配置**：Webhook 本身要在 Supabase Studio 里手动建（Database → Webhooks → New webhook → 表选 `replies` → 事件选 `Insert` → 目标选 `notify-submitter`，再对表 `feedback` → 事件 `Update` 建一次）。写不进迁移脚本，因为 Edge Function 的 URL 是项目专属的，每个自部署实例都不一样。这个 Function 还需要设两个 secret（`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 是 Supabase 自动注入的，只有 `RESEND_API_KEY` 和可选的 `NOTIFY_FROM_EMAIL` 需要手动设置）：
+**这个仓库自动化不了的一次性配置**（在真实项目上验证过的步骤——Supabase Studio 这块界面挪过位置，如果下面提到的菜单项找不到，直接搜 "webhook"）：
 
-```bash
-supabase secrets set RESEND_API_KEY=re_xxx
-supabase secrets set NOTIFY_FROM_EMAIL=notifications@你的域名.com
-```
+1. **部署 Edge Function**：Supabase 后台 → Edge Functions → 新建一个，名字精确填 `notify-submitter`，把 `supabase/functions/notify-submitter/index.ts` 的代码粘贴进去，部署。
+2. **把这个函数的 "Verify JWT with legacy secret" 关掉**（在它的 Settings 标签页）。这个函数不走 Supabase 自己的 JWT 认证——而且新版项目用的 `sb_publishable_`/`sb_secret_` 这套 key 本来就不是 legacy secret 签发的 JWT，这个开关开着也校验不过。但只关掉不做别的，等于把这个接口完全暴露给任何知道 URL 的人（可以伪造 webhook 请求体，把你的 Resend 账号当垃圾邮件转发器），所以函数自己另外校验一个共享密钥，见第 4 步。
+3. **给这个函数配 secrets**（Edge Functions → Secrets；`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY` 是 Supabase 自动注入的，其余要手动加）：
+   - `RESEND_API_KEY` —— 没配的话函数不报错，只是记一条 warning 跳过发信，邮件通知没接好之前系统其余部分照样能用
+   - `NOTIFY_FROM_EMAIL` —— 一个属于你已验证发信域名的地址
+   - `WEBHOOK_SECRET` —— 随便一个随机字符串（`openssl rand -hex 32` 生成一个就行），这是第 2 步说的共享密钥
+4. **建 Database Webhooks**——在 Integrations → Database Webhooks（新版 Studio 里不直接挂在 "Database" 底下）→ Webhooks 标签页 → Create a new hook，建两次：
+   - 表 `replies`，事件 `Insert`，类型选 "Supabase Edge Functions"，目标 `notify-submitter`
+   - 表 `feedback`，事件 `Update`，目标同上
 
-没配 `RESEND_API_KEY` 时函数不会报错，只是记一条 warning 并跳过发信——邮件通知没接好之前，系统其余部分照样能用。
+   两个都要加一条 `x-webhook-secret` 的 HTTP Header，值跟上面的 `WEBHOOK_SECRET` 一致——这是唯一一步真的没法写进这个仓库的任何文件里的配置，因为 Edge Function 的 URL 和密钥都是项目专属的。

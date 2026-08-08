@@ -9,11 +9,12 @@
 - [x] Public board UI: list/submit/vote at `/board`, detail + replies at `/board/[id]` (`apps/web/src/app/board/**`)
 - [x] Admin console: cross-product unified inbox, single-product filter, status changes, writing replies (see the unified-inbox design in ARCHITECTURE.md), plus Supabase Auth magic-link login (`apps/web/src/app/admin/**`, `apps/web/src/app/login`)
 - [x] Three-layer anti-abuse: honeypot + Turnstile + Redis rate limiting (`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`, already wired into the submit-feedback and vote endpoints)
-- [x] Event-driven email notifications: `notify-submitter` now queries Supabase and calls Resend for real (`supabase/functions/notify-submitter/index.ts`); the Database Webhook itself and the `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` secrets still need to be set up by hand per project, see the deployment note in API.md
+- [x] Event-driven email notifications: `notify-submitter` queries Supabase and calls Resend for real (`supabase/functions/notify-submitter/index.ts`). Deployed and verified end-to-end against a real project — an admin reply now actually lands in the submitter's inbox. Two things this needed that don't ship as code, see the deployment note in API.md: the Database Webhook itself (table-specific, has to be created by hand per project) and turning off the function's "Verify JWT with legacy secret" toggle in favor of a shared-secret header (`WEBHOOK_SECRET` / `x-webhook-secret`), since the new-style `sb_secret_` keys aren't legacy-secret-signed JWTs
 - [x] Real Turnstile token acquisition in both the widget (Shadow DOM, `packages/widget/src/turnstile.ts`) and the board (`apps/web/src/lib/turnstile-client.ts`) — the vote flow was reworked from `window.prompt` into an inline form (`apps/web/src/app/board/vote-button.tsx`) since Turnstile needs a persistent DOM container to render into. Requires `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `data-turnstile-site-key` — Cloudflare's public test key `1x00000000000000000000AA` works for local dev
-- [ ] At least 2 of this developer's own products integrated as validation (needs real Supabase/Turnstile/Upstash/Resend projects + a deployment)
+- [x] First real deployment live at `feedback.tonimakes.com` (Vercel + Supabase in Singapore + Upstash + Cloudflare Turnstile + Resend, domain on Namecheap) — submit, vote, admin login, admin reply, and the reply notification email have all been verified against this real deployment with a test product
+- [ ] A second real product integrated (only one so far is the test product used to validate the pipeline above)
 
-**Acceptance criteria**: this developer's own products can actually receive feedback, votes don't duplicate, users get emailed on status changes, and the unified inbox shows every product's new feedback at a glance.
+**Acceptance criteria**: this developer's own products can actually receive feedback, votes don't duplicate, users get emailed on status changes, and the unified inbox shows every product's new feedback at a glance. Met for one product; extending to a second is what's left.
 
 ## Phase 1: open-source release prep
 
@@ -60,11 +61,12 @@
 - [x] 公开面板 UI：`/board` 列表+提交+投票，`/board/[id]` 详情+回复（`apps/web/src/app/board/**`）
 - [x] 管理后台：跨产品统一收件箱、单产品筛选、改状态、写回复（见 ARCHITECTURE.md 跨产品收件箱设计），含 Supabase Auth magic link 登录（`apps/web/src/app/admin/**`、`apps/web/src/app/login`）
 - [x] 防刷三层：蜜罐 + Turnstile + Redis 频率限制（`apps/web/src/lib/{turnstile,rate-limit,request-ip}.ts`，已接进提交反馈/投票两个端点）
-- [x] 事件驱动邮件通知：`notify-submitter` 现在真的查 Supabase、调 Resend 发信了（`supabase/functions/notify-submitter/index.ts`）；Database Webhook 本身和 `RESEND_API_KEY`/`NOTIFY_FROM_EMAIL` 这两个 secret 还是要每个项目手动配一次，见 API.md 里的部署说明
+- [x] 事件驱动邮件通知：`notify-submitter` 真的查 Supabase、调 Resend 发信了（`supabase/functions/notify-submitter/index.ts`），已经在真实项目上端到端验证过——管理员写回复，提交者真的收到了邮件。有两件事代码里写不了，见 API.md 部署说明：Database Webhook 本身（跟具体表绑定，每个项目要手动建）、以及把函数的 "Verify JWT with legacy secret" 开关关掉、改用共享密钥校验（`WEBHOOK_SECRET` / `x-webhook-secret` 请求头）——因为新版 `sb_secret_` 密钥不是 legacy secret 签的 JWT，满足不了那个开关的校验
 - [x] widget（Shadow DOM，`packages/widget/src/turnstile.ts`）和 board（`apps/web/src/lib/turnstile-client.ts`）都接了真实 Turnstile——投票流程也从 `window.prompt` 改成了内联表单（`apps/web/src/app/board/vote-button.tsx`），因为 Turnstile 需要一个常驻的 DOM 容器才能渲染。需要 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `data-turnstile-site-key`，本地开发可以用 Cloudflare 官方测试 key `1x00000000000000000000AA`
-- [ ] 至少 2 个自己的产品接入验证（需要真实 Supabase/Turnstile/Upstash/Resend 项目 + 部署）
+- [x] 第一次真实部署上线：`feedback.tonimakes.com`（Vercel + Supabase 新加坡 + Upstash + Cloudflare Turnstile + Resend，域名在 Namecheap）——提交、投票、管理员登录、管理员回复、回复通知邮件，全部拿一个测试产品在这套真实部署上验证过了
+- [ ] 第二个真实产品接入（目前只有验证上面这条链路用的测试产品这一个）
 
-**验收标准**：自己的产品能实际收到反馈、投票不重复、状态变更用户能收到邮件、跨产品收件箱能一眼看完所有产品的新反馈。
+**验收标准**：自己的产品能实际收到反馈、投票不重复、状态变更用户能收到邮件、跨产品收件箱能一眼看完所有产品的新反馈。已经在一个产品上达成，剩下的是再接一个产品验证。
 
 ## Phase 1：开源发布准备
 
