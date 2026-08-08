@@ -18,6 +18,15 @@ interface NotificationPlan {
 }
 
 Deno.serve(async (req: Request) => {
+  // 关掉了 Supabase 的 "Verify JWT" 开关（那个验证的是 Supabase 自己签发的 JWT，
+  // 新版 sb_secret_ 密钥体系下不一定能满足），改用共享密钥自己把关——
+  // 没有这一步，任何知道这个 URL 的人都能伪造 webhook 请求体，
+  // 拿你的 Resend 账号当垃圾邮件转发器给任意地址发信。
+  const expectedSecret = Deno.env.get("WEBHOOK_SECRET");
+  if (!expectedSecret || req.headers.get("x-webhook-secret") !== expectedSecret) {
+    return new Response("unauthorized", { status: 401 });
+  }
+
   const payload = (await req.json()) as WebhookPayload;
 
   const supabase = createClient(
